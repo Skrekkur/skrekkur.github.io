@@ -1,0 +1,100 @@
+/* Basic Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    padding: 20px;
+    color: #333;
+    background-color: #f4f4f4;
+  }
+  
+  /* Container for content */
+  .container {
+    max-width: 90%;
+    margin: auto;
+    padding: 20px;
+  }
+  
+  /* Basic Typography */
+  h1, h2, h3, h4, h5, h6 {
+    margin-bottom: 20px;
+    color: #e8e7e7;
+  }
+  
+  p {
+    margin-bottom: 10px;
+  }
+  
+  /* Links */
+  a {
+    color: #007bff;
+    text-decoration: none;
+  }
+  
+  a:hover {
+    text-decoration: underline;
+  }
+  
+  .nav-links {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex; /* This ensures your nav items are laid out horizontally */
+    justify-content: center; /* Centers the nav items horizontally. Adjust this as needed */
+}
+
+  .nav-links li {
+      /* The flex display makes it unnecessary to float items for horizontal layout */
+  }
+
+  .nav-links li a {
+      display: block;
+      color: white;
+      text-align: center;
+      padding: 14px 16px;
+      text-decoration: none;
+  }
+
+  .nav-links li a:hover {
+      background-color: #ddd;
+      color: black;
+  }
+
+  /* Optional: Basic styling for the main content to add some spacing */
+  .main-content {
+      margin-top: 20px; /* Adjust the margin as needed based on your navbar's height */
+  }
+    
+  /* Grid Layout */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+  
+  .card {
+    background: #fff;
+    padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  /* Utility Classes */
+  .text-center {
+    text-align: center; 
+  }
+  
+  .mt-20 {
+    margin-top: 20px;
+  }
+  
+  /* Responsive Images */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
