@@ -9,8 +9,8 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="stylesheet" href="/css/chatgpt.css">
-		<link rel="stylesheet" href="/css/aevar.css">
-		<title>On Bottlenecks</title>
+		
+		<title>Bottleneck</title>
 	</head>
 	<body>
  
@@ -25,7 +25,23 @@
             </ul>
         </nav>
 		<main>
-			<p>Bottlenecks here</p>
+			<h2>Finding the bottleneck</h2>
+<p>This will be very game focused but this guide can partially be used for applications as well as general systems performance</p>
+<p>Ever wondered what piece of hardware in your PC is keeping your favorite game to run as well as it could, or even just what to upgrade next? I am going to share my experience and knowledge to help with that.</p>
+<p>Tools for analyzing performance in windows have greatly improved over the years and this screenshot is from the performance tab in windows 10. This information is available in windows 7 in the resource monitor application, but I will leave using that for the windows 7 readers.</p>
+<h2>Windows 10 perfomance tab</h2>
+<p>If you do not have two monitors, there are two ways of analyzing performance of a game. Alt tabbing and checking history, or playing in windowed, the easiest way is to have two monitors and to start with the performance tab open on one screen.</p>
+<p>Things to look for:</p>
+<p>Memory usage:  80% or higher, most modern operating systems, start writing parts of the memory to disk, once memory use reaches 80%, since disks are approximately 100x to 100000x slower than RAM. This can also cause your hardrive to be overloaded which has cascading effects on performance.</p>
+<p>The percentage on the Disks shown in the performance tab, indicates the ‘Active time’ on the disk, its normal that this hits 100% during loading, but if it is quite often at 100% your disk is overloaded and cannot handle requests fast enough. If you don´t have an SSD, that is your next upgrade, since SSDs handle requests much quicker than older HDDs.  Like stated above your memory might be a partial cause of this.</p>
+<p>CPU usage: The problem with CPU usage display in windows is that it only goes from 0 to a 100, OSX can go over 100% because it has 0-100% per core on a processor, since often parts of games or applications are limited by a single thread, this number does simply not say enough in today’s world. On an i7 (quad core with hyberthreading) full usage of one thread displays as 12.5% cpu usage. To make matters even more complicated, many game engines consume a full core no matter if they need it or not.
+Many of today’s engines to leverage multiple cores, but they differ in how well they can share their load between threads, so even if your CPU does not show a 100% or even 50% you might still be bound by your CPU.  My approach so far with CPU is to see if I can rule out everything else being the bottleneck, and if so my CPU probably is.</p>
+<p>Now that being out of the way, the last big piece of the puzzle is the graphics card, or your GPU, there are essentially two things about GPU that can limit your performance. Graphics memory and pure performance of your GPU.  The GPU performance is a topic in and of itself and can be quite optimized by developers. The only information I am providing here is as a consumer, given a current build of a game, is my GPU limiting me and if so then how.</p>
+<p>This  is where windows comes short and we will have to resort to 3rd party software, I use HWINFO, which is quite excellent piece of software.</p>
+<p>To do what I am demonstrating here, download HWINFO run it, tick sensors only, and find GPU core load and GPU memory allocated.</p>
+<p>You can look at those values, but its more helpful to double click them and get the histograms. In the GPU memory allocated you might have to manually set the maximum. It is your GPU memory in megabytes, so 4GB is 4096, 8GB is 8192, but you don´t have to be exact, since its rare that games are just under a few megabytes of the limit.</p>
+<p>What to look for here is pretty simple. If the GPU memory allocated is very close or at your GPU Ram capacity, you should lower your graphics settings (often just texture quality) or get a GPU with more memory, If the GPU Core load often hits 100%, you are overloading your GPU, and probably need a better one.</p>
+<p>Some notes: If you have V-Sync turned off and the game has completely unlimited frame-rate, it is likely that GPU core load will stay at 100% and your CPU higher than usual. The reason for this is that your computer will try to render as many frames as it possibly can, therefore using all the resources it has.</p>
 
 		</main>
       
