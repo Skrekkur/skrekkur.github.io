@@ -81,6 +81,8 @@ body {
 
 year {
   color: var(--accent-lights);
+  font-size: medium;
+  font-style: italic;
   
 }
 
