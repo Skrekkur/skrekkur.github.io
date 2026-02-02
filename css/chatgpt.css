@@ -22,20 +22,20 @@
   --line-height: 1.618;
 
   /* Default (light) theme */
-  --bg: #212121;
-  --accent-bg: #2b2b2b;
-  --text: #dcdcdc;
-  --text-light: #ababab;
-  --border: #666;
-  --accent: #ffb300;
-  --accent-light: #ffecb3;
-  --code: #f06292;
-  --preformatted: #ccc;
-  --disabled: #111;
+  --bg: #fff;
+  --accent-bg: #f5f7ff;
+  --text: #212121;
+  --text-light: #585858;
+  --border: #d8dae1;
+  --accent: #0d47a1;
+  --accent-light: #90caf9;
+  --code: #d81b60;
+  --preformatted: #444;
+  --marked: #ffdd33;
+  --disabled: #efefef;
 }
 
-
-/* Dark theme 
+/* Dark theme */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #212121;
@@ -55,7 +55,7 @@
     opacity: 0.6;
   }
 }
-*/
+
 html {
   /* Set the font globally */
   font-family: var(--sans-font);
@@ -79,19 +79,10 @@ body {
   overflow-wrap: break-word;
 }
 
-year {
-  color: var(--accent-lights);
-  font-size: medium;
-  font-style: italic;
-  
-}
-
-/* Make the header bg full width, but the content inline with body */
-header {
+/* Make the header bg full width, horizontal layout with name left, nav+icons right */
+header.site-header {
   background: var(--accent-bg);
   border-bottom: 1px solid var(--border);
-  text-align: center;
-  padding: 2rem 0.5rem;
   width: 100vw;
   position: relative;
   box-sizing: border-box;
@@ -99,6 +90,83 @@ header {
   right: 50%;
   margin-left: -50vw;
   margin-right: -50vw;
+  padding: 1rem 0.5rem;
+}
+
+header.site-header .header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  max-width: 45rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+header.site-header h1.site-name {
+  margin: 0;
+  font-size: calc(var(--base-fontsize) * var(--header-scale) * var(--header-scale));
+}
+
+header.site-header h1.site-name a {
+  color: var(--text) !important;
+  text-decoration: none;
+}
+
+header.site-header h1.site-name a:hover {
+  color: var(--accent) !important;
+}
+
+/* Header nav: section links + social icons in one row */
+header .header-nav {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-size: 1rem;
+  flex-wrap: wrap;
+}
+
+header .header-nav > a {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  color: var(--text) !important;
+  padding: 0;
+  text-decoration: none;
+  transition: 0.4s;
+}
+
+header .header-nav > a:hover {
+  color: var(--accent) !important;
+}
+
+/* Social icon links */
+header .header-social {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: 0.5rem;
+}
+
+header .header-social .social-icon {
+  color: var(--text) !important;
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  border: none;
+  transition: 0.4s;
+}
+
+header .header-social .social-icon:hover {
+  color: var(--accent) !important;
+}
+
+header .header-social .social-icon svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 /* Remove margins for header text */
@@ -119,7 +187,7 @@ h3 {
   line-height: 1.1;
 }
 
-/* Format navigation */
+/* Format navigation (fallback for other navs) */
 nav {
   font-size: 1rem;
   line-height: 2;
@@ -196,7 +264,7 @@ h6 {
 
 /* Format links & buttons */
 a,
-a:any-link {
+a:visited {
   color: var(--accent);
 }
 
