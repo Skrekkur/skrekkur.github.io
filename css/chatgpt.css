@@ -533,29 +533,82 @@ main video {
   border-radius: 5px;
 }
 
-/* Projects page: company / game logos (overrides layout.html img width) */
-main .project-logos {
+/* Projects page: screenshot with logo below */
+.project-media {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem 1.25rem;
-  margin: 0.5rem 0 1.25rem;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 1rem 0 1.5rem;
 }
-main .project-logos img {
+
+.project-media-logo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  margin-top: 0.15rem;
+  background: none;
+  border: none;
+  min-height: 0;
+}
+
+.project-media-logo img {
   width: auto;
-  max-width: min(220px, 100%);
+  max-width: min(160px, 100%);
+  max-height: 28px;
   height: auto;
   object-fit: contain;
+  border-radius: 0;
+  opacity: 0.7;
+}
+
+.theme-logo-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .theme-logo-light {
+    display: none;
+  }
+
+  .theme-logo-dark {
+    display: block;
+  }
+}
+
+.project-media .game-screenshot {
+  margin: 0;
+  min-width: 0;
+}
+
+.project-entry-logo {
+  display: flex;
+  align-items: center;
+  margin: 0.5rem 0 1rem;
+  padding: 0;
+  background: none;
+  border: none;
+}
+
+.project-entry-logo img {
+  width: auto;
+  max-width: min(160px, 100%);
+  max-height: 28px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+  opacity: 0.7;
 }
 
 main figure.game-screenshot {
   margin: 0.75rem 0 1.5rem;
 }
 main figure.game-screenshot img {
-  width: 100%;
+  display: block;
+  width: auto;
   max-width: 100%;
   height: auto;
-  display: block;
+  margin: 0 auto;
   border-radius: 6px;
   border: 1px solid var(--border);
 }
@@ -700,6 +753,20 @@ main figure.game-screenshot figcaption a:visited {
   max-height: 44px;
   object-fit: contain;
   margin-bottom: 0.35rem;
+}
+
+.home-page .work-card-logo.theme-logo-dark {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .home-page .work-card-logo.theme-logo-light {
+    display: none;
+  }
+
+  .home-page .work-card-logo.theme-logo-dark {
+    display: block;
+  }
 }
 
 .work-card-project {
