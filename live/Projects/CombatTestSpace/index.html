@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101b18">
+    <title>Fieldwork - Combat Sandbox</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <a class="wordmark" href="#" aria-label="Fieldwork home"><span class="mark">F</span><span>FIELDWORK</span></a>
+        <span class="topbar-divider"></span>
+        <span class="breadcrumb">SIMULATION <span>/</span> COMBAT SPACE</span>
+        <div class="topbar-meta"><span class="live-dot"></span><span>LOCAL SESSION</span><span class="build-tag">PROTOTYPE 01</span><button id="themeToggle" class="theme-toggle" type="button" aria-pressed="true" aria-label="Toggle dark mode" title="Toggle dark mode"><span id="themeToggleIcon">☾</span></button></div>
+      </header>
+
+      <section class="controlbar" aria-label="Simulation controls">
+        <div class="control-group">
+          <button id="playButton" class="button button-primary" type="button"><span id="playIcon">Ⅱ</span><span id="playLabel">Pause</span></button>
+          <button id="resetButton" class="button button-quiet" type="button" title="Reset simulation">↺ <span>Reset</span></button>
+          <span class="control-divider"></span>
+          <label class="timescale-control" for="timeScaleSlider"><span>SPEED</span><input id="timeScaleSlider" type="range" min="0.25" max="4" step="0.25" value="1" aria-label="Simulation speed" aria-valuetext="1× simulation speed"><output id="timeScaleValue" for="timeScaleSlider">1×</output></label>
+          <span class="control-divider"></span>
+          <label class="timescale-control" for="accuracySlider"><span>ACCURACY</span><input id="accuracySlider" type="range" min="0" max="15" step="0.5" value="4" aria-label="Weapon accuracy cone" aria-valuetext="±4° cone of fire"><output id="accuracyValue" for="accuracySlider">±4°</output></label>
+          <span class="control-divider"></span>
+          <div class="spawn-group" role="group" aria-label="Spawn unit">
+            <button id="spawnEmberButton" class="spawn-button spawn-ember" type="button" title="Spawn unit for Team 1">＋ T1</button>
+            <div class="type-toggle" role="group" aria-label="Unit type to spawn">
+              <button id="spawnTypeRoam" class="type-button active" type="button">ROAM</button>
+              <button id="spawnTypeGuard" class="type-button" type="button">GUARD</button>
+            </div>
+            <button id="spawnTideButton" class="spawn-button spawn-tide" type="button" title="Spawn unit for Team 2">＋ T2</button>
+          </div>
+          <span class="control-divider"></span>
+          <button id="traceButton" class="button button-quiet" type="button" aria-pressed="false">⌁ <span>Line trace</span></button>
+        </div>
+        <div class="view-controls">
+          <div class="view-toggle" role="group" aria-label="World view"><button id="topViewButton" class="view-button active" type="button">TOP</button><button id="isoViewButton" class="view-button" type="button">ISO</button></div>
+          <button id="rotateLeftButton" class="icon-button camera-button" type="button" aria-label="Rotate camera left" title="Rotate camera left">↶</button>
+          <button id="rotateRightButton" class="icon-button camera-button" type="button" aria-label="Rotate camera right" title="Rotate camera right">↷</button>
+          <label class="switch-row"><input id="rangesToggle" type="checkbox"><span class="switch"></span><span>Perception</span></label>
+          <label class="switch-row"><input id="sightToggle" type="checkbox" checked><span class="switch"></span><span>Sight lines</span></label>
+          <span class="control-divider"></span>
+          <button id="zoomOutButton" class="icon-button" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+          <span id="zoomLabel" class="zoom-label">100%</span>
+          <button id="zoomInButton" class="icon-button" type="button" aria-label="Zoom in" title="Zoom in">＋</button>
+          <button id="fitButton" class="fit-button" type="button" title="Fit arena in view">FIT</button>
+        </div>
+      </section>
+
+      <section class="workspace">
+        <aside class="left-rail" aria-label="Unit roster and arena settings">
+          <div class="rail-heading"><span>ROSTER</span><span id="unitCount" class="count-badge">04</span></div>
+          <div id="rosterList" class="roster-list"></div>
+          <div class="rail-section arena-section">
+            <div class="rail-heading"><span>ARENA</span><span class="section-index">01</span></div>
+            <div class="arena-value"><span>Boundary</span><strong>Rectangle</strong></div>
+            <div class="arena-value"><span>World size</span><strong>120 × 80 <i>m</i></strong></div>
+            <div class="arena-value"><span>Wall markers</span><strong class="wall-value">Active</strong></div>
+            <div class="axis-key"><span class="axis-x">X</span><span class="axis-z">Z</span><span>Ground plane</span></div>
+          </div>
+          <div class="rail-foot"><span class="live-dot"></span> SIMULATION RUNNING</div>
+        </aside>
+
+        <section class="viewport-section" aria-label="Combat simulation world view">
+          <div class="viewport-heading"><div><span id="viewEyebrow" class="eyebrow">TOP-DOWN WORLD</span><h1>Combat sandbox</h1></div><div class="coordinate-readout"><span>WORLD XYZ</span><strong id="pointerCoordinates">X  — &nbsp; Z  —</strong></div></div>
+          <div id="canvasFrame" class="canvas-frame">
+            <canvas id="worldCanvas" aria-label="Top-down view of the combat arena"></canvas>
+            <div class="canvas-corner corner-tl"></div><div class="canvas-corner corner-tr"></div><div class="canvas-corner corner-bl"></div><div class="canvas-corner corner-br"></div>
+            <div id="traceHint" class="trace-hint" hidden>SELECT TRACE START POINT</div>
+            <div class="canvas-stamp"><span class="stamp-dot"></span> LIVE SIM</div>
+            <div class="compass"><span>N</span><span class="compass-arrow">↑</span></div>
+            <div id="canvasHelp" class="canvas-help">DRAG TO PAN <span>·</span> SCROLL TO ZOOM</div>
+          </div>
+          <footer class="viewport-footer"><span id="simClock">T+ 00:00.0</span><span class="footer-separator"></span><span id="simStatus">Agents are acquiring targets</span><span class="footer-spacer"></span><span id="frameRate">60 FPS</span></footer>
+        </section>
+
+        <aside class="right-rail" aria-label="Selected unit details and event log">
+          <section class="inspector-section">
+            <div class="rail-heading"><span>INSPECTOR</span><span class="section-index">02</span></div>
+            <div id="inspectorContent" class="inspector-content"></div>
+          </section>
+          <section class="event-section">
+            <div class="rail-heading"><span>EVENT FEED</span><span id="eventCount" class="count-badge">00</span></div>
+            <div id="eventList" class="event-list" aria-live="polite"></div>
+          </section>
+          <div class="rail-foot coordinate-foot"><span>SPACE</span> WORLD XYZ</div>
+        </aside>
+      </section>
+      <footer class="build-drawer" aria-label="Build menu">
+        <div class="build-drawer-heading"><span>BUILD</span><span id="buildHint" class="build-hint">Select an item, click the map to place it</span></div>
+        <div class="build-items">
+          <button id="buildGuardPointEmber" class="build-item build-item-ember" type="button" aria-pressed="false" title="Place a Team 1 guard point">
+            <span class="build-item-icon">⚑</span>
+            <span class="build-item-label">Guard · T1</span>
+          </button>
+          <button id="buildGuardPointTide" class="build-item build-item-tide" type="button" aria-pressed="false" title="Place a Team 2 guard point">
+            <span class="build-item-icon">⚑</span>
+            <span class="build-item-label">Guard · T2</span>
+          </button>
+        </div>
+      </footer>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    </main>
+  </body>
+</html>
