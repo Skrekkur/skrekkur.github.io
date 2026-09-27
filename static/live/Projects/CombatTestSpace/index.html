@@ -6,6 +6,12 @@
     <meta name="theme-color" content="#101b18">
     <title>Fieldwork - Combat Sandbox</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="config.js" defer></script>
+    <script src="core/GameObject.js" defer></script>
+    <script src="units/Unit.js" defer></script>
+    <script src="systems/MovementProcessor.js" defer></script>
+    <script src="systems/CombatProcessor.js" defer></script>
+    <script src="ui/UiController.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -31,6 +37,7 @@
             <div class="type-toggle" role="group" aria-label="Unit type to spawn">
               <button id="spawnTypeRoam" class="type-button active" type="button">ROAM</button>
               <button id="spawnTypeGuard" class="type-button" type="button">GUARD</button>
+              <button id="spawnTypeScout" class="type-button" type="button">SCOUT</button>
             </div>
             <button id="spawnTideButton" class="spawn-button spawn-tide" type="button" title="Spawn unit for Team 2">＋ T2</button>
           </div>
@@ -43,6 +50,12 @@
           <button id="rotateRightButton" class="icon-button camera-button" type="button" aria-label="Rotate camera right" title="Rotate camera right">↷</button>
           <label class="switch-row"><input id="rangesToggle" type="checkbox"><span class="switch"></span><span>Perception</span></label>
           <label class="switch-row"><input id="sightToggle" type="checkbox" checked><span class="switch"></span><span>Sight lines</span></label>
+          <div class="view-toggle" role="group" aria-label="Fog of war team view">
+            <button id="fogOffButton" class="view-button active" type="button">FOG OFF</button>
+            <button id="fogEmberButton" class="view-button" type="button">FOG T1</button>
+            <button id="fogTideButton" class="view-button" type="button">FOG T2</button>
+          </div>
+          <label class="switch-row"><input id="fogHideToggle" type="checkbox"><span class="switch"></span><span>Hide unseen</span></label>
           <span class="control-divider"></span>
           <button id="zoomOutButton" class="icon-button" type="button" aria-label="Zoom out" title="Zoom out">−</button>
           <span id="zoomLabel" class="zoom-label">100%</span>

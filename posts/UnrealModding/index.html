@@ -10,7 +10,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link rel="stylesheet" href="/css/chatgpt.css">
 		
-		<title>Ævar Örn Kvaran</title>
+		<title>Unreal Modding</title>
 	</head>
 	<body>
  
@@ -30,44 +30,29 @@
 			</div>
 		</header>
 		<main>
-			<p>More things to do away from combat</p>
+			<p>Unreal bali intro on modding</p>
+<p>https://www.youtube.com/watch?v=qb0_ypUqnxE&amp;pp=ygUYVW5yZWFsIGJhbGkgMjAyNSBtb2RkaW5n0gcJCU4LAYcqIYzv</p>
+<p>MODIO base unreal plugin
+https://github.com/modio/modio-ue</p>
+<p>MODIO Pak management
+https://github.com/modio/modio-ue-modiougc</p>
+<p>Sample project for modding
+https://github.com/modio/modio-ue-actionrpg</p>
+<h1>Addative changes really are the easiest</h1>
+<p>Game looks for all assets of type X</p>
+<p>content plugin X adds more types of X</p>
+<p>Some questions for our own content.</p>
+<p>Core:
+Contains no actual buildable DA</p>
+<p>DigInBase</p>
 <ul>
-<li>Manage food</li>
-<li>Manage rest</li>
-<li>Morale and sanity management</li>
-<li>Implement command point/order system</li>
+<li>Has all the buildables in base game</li>
 </ul>
-<h1>Metagame Ideas</h1>
-<p>Unlock starting time
-Directly or undirectly</p>
-<p>Versions of system
-Food
-Simple/Complex</p>
-<p>Food as a contension</p>
-<p>Digging from sides</p>
-<ul>
-<li>
-<p>Effect</p>
-</li>
-<li>
-<p>Implementation
-Ideas.. just simply make the ones in the middle unpassable
-Use depend job system to not create job tasks on the ends</p>
-<p>Section
-1,2,3,4,5,6,7,8,9,10</p>
-<p>2 depends on 1 or 3
-9 depends on 10 or 8
-10 is available
-1 is available</p>
-<p>DependentJob operator And OR</p>
-</li>
-</ul>
-<p>Also It is truly possible to start a new trench.. do we block that or keep supporting it?</p>
-<p>Possibly 3 spots/slots for digging
-top, left, right
-if left or right is available, then top should be disabled. Do we always just dig down in one place and then from sides?
-Are there cases where everyone digs from top? Is it a mode we determine when placing the trench.. and potentially afterwards?</p>
-<p>Currently building jobs of digging trenches are relatively independent. That may have to change for this, although trench segments themselves are linked, and so are the repair jobs to neighbouring items.</p>
+<p>For everything we need to cook a &quot;base version&quot; of the game</p>
+<p>Other content can depend on this and it is versionedþ</p>
+<p>Mods can have dependencies.
+Base game
+DLC 1,2,3, etc</p>
 
 		</main>
       
