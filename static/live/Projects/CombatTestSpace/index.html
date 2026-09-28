@@ -9,6 +9,8 @@
     <script src="config.js" defer></script>
     <script src="core/GameObject.js" defer></script>
     <script src="units/Unit.js" defer></script>
+    <script src="systems/NavigationSystem.js" defer></script>
+    <script src="systems/LevelStorage.js" defer></script>
     <script src="systems/MovementProcessor.js" defer></script>
     <script src="systems/CombatProcessor.js" defer></script>
     <script src="ui/UiController.js" defer></script>
@@ -50,6 +52,7 @@
           <button id="rotateRightButton" class="icon-button camera-button" type="button" aria-label="Rotate camera right" title="Rotate camera right">↷</button>
           <label class="switch-row"><input id="rangesToggle" type="checkbox"><span class="switch"></span><span>Perception</span></label>
           <label class="switch-row"><input id="sightToggle" type="checkbox" checked><span class="switch"></span><span>Sight lines</span></label>
+          <label class="switch-row"><input id="pathsToggle" type="checkbox"><span class="switch"></span><span>Paths</span></label>
           <div class="view-toggle" role="group" aria-label="Fog of war team view">
             <button id="fogOffButton" class="view-button active" type="button">FOG OFF</button>
             <button id="fogEmberButton" class="view-button" type="button">FOG T1</button>
@@ -114,6 +117,20 @@
             <span class="build-item-icon">⚑</span>
             <span class="build-item-label">Guard · T2</span>
           </button>
+          <button id="buildObstacle" class="build-item build-item-obstacle" type="button" aria-pressed="false" title="Place a 12 × 12 metre obstacle">
+            <span class="build-item-icon">▦</span>
+            <span class="build-item-label">Obstacle</span>
+          </button>
+        </div>
+        <div class="level-library" aria-label="Saved levels">
+          <span class="level-library-label">LEVELS</span>
+          <input id="levelNameInput" class="level-name-input" type="text" maxlength="40" placeholder="Level name" aria-label="Level name">
+          <select id="savedLevelSelect" class="level-select" aria-label="Saved level"><option value="">No saved levels</option></select>
+          <button id="newLevelButton" class="level-action" type="button" title="Create a new save">NEW</button>
+          <button id="saveLevelButton" class="level-action level-action-primary" type="button" title="Save obstacles and guard points">SAVE</button>
+          <button id="loadLevelButton" class="level-action" type="button" disabled>LOAD</button>
+          <button id="defaultLevelButton" class="level-action" type="button" disabled>SET DEFAULT</button>
+          <button id="deleteLevelButton" class="level-action level-action-danger" type="button" disabled>DELETE</button>
         </div>
       </footer>
       <div id="toast" class="toast" role="status" aria-live="polite"></div>

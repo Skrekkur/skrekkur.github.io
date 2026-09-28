@@ -1,6 +1,7 @@
 (() => {
   const WORLD_WIDTH = 120;
   const WORLD_DEPTH = 80;
+  const OBSTACLE_SIZE = 12;
   const { TEAM: TEAMS, BEHAVIOR, STATE, TRACE, TOOL, FOG, EVENT } = window.GAME_CONSTANTS;
   const TEAM = window.TEAM;
   const TEAM_BY_ID = window.TEAM_BY_ID;
@@ -10,6 +11,8 @@
   const MOVEMENT_BEHAVIORS = window.MOVEMENT_BEHAVIORS;
   const GLOBAL_ACCURACY = window.GLOBAL_ACCURACY;
   const Unit = window.Unit;
+  const NavigationSystem = window.NavigationSystem;
+  const LevelStorage = window.LevelStorage;
   const MovementProcessor = window.MovementProcessor;
   const CombatProcessor = window.CombatProcessor;
 
@@ -18,7 +21,11 @@
       this.units = [];
       this.traces = [];
       this.guardPoints = [];
+      this.obstacles = [];
       this.nextGuardPointId = 1;
+      this.nextObstacleId = 1;
+      this.obstacleRevision = 0;
+      this.navigation = new NavigationSystem(WORLD_WIDTH, WORLD_DEPTH, 4);
       this.revealByTeam = { Ember: new Set(), Tide: new Set() };
       this.elapsed = 0;
       this.timeScale = 1;
@@ -33,9 +40,13 @@
       this.units = [];
       this.traces = [];
       this.guardPoints = [];
+      this.obstacles = [];
       this.nextGuardPointId = 1;
+      this.nextObstacleId = 1;
+      this.obstacleRevision++;
       this.revealByTeam = { Ember: new Set(), Tide: new Set() };
       this.elapsed = 0;
+      this.lastPerceptionUpdate = 0;
       this.nextId = 1;
       for (let index = 0; index < 2; index++) {
         this.addUnit(TEAMS.EMBER, undefined, false);
@@ -65,6 +76,7 @@
       unit.shotsRemaining = 0;
       unit.shotTimer = 0;
       unit.hitsThisBurst = 0;
+      this.clearPath(unit);
     }
 
     selectRoamDestination(unit) {
@@ -87,6 +99,7 @@
     }
 
     addGuardPoint(position, team, heading) {
+      if (this.obstacles.some(obstacle => Math.abs(position.x - obstacle.position.x) <= obstacle.width / 2 && Math.abs(position.z - obstacle.position.z) <= obstacle.depth / 2)) return null;
       if (heading === undefined) {
         const center = { x: WORLD_WIDTH / 2, z: WORLD_DEPTH / 2 };
         heading = Math.atan2(position.z - center.z, position.x - center.x);
@@ -115,21 +128,105 @@
       unit.guardPointId = null;
     }
 
-    moveTowards(unit, destination, delta) {
-      const dx = destination.x - unit.position.x;
-      const dz = destination.z - unit.position.z;
-      const distance = Math.hypot(dx, dz);
-      if (distance <= 1.2) {
-        unit.position.x = destination.x;
-        unit.position.z = destination.z;
-        unit.velocity.x = 0;
-        unit.velocity.z = 0;
-        return true;
+    snapObstaclePosition(position) {
+      const halfSize = OBSTACLE_SIZE / 2;
+      return {
+        x: window.clamp(Math.round((position.x - this.navigation.cellSize / 2) / this.navigation.cellSize) * this.navigation.cellSize + this.navigation.cellSize / 2, halfSize, WORLD_WIDTH - halfSize),
+        z: window.clamp(Math.round((position.z - this.navigation.cellSize / 2) / this.navigation.cellSize) * this.navigation.cellSize + this.navigation.cellSize / 2, halfSize, WORLD_DEPTH - halfSize)
+      };
+    }
+
+    addObstacle(position) {
+      const snapped = this.snapObstaclePosition(position);
+      if (!this.canPlaceObstacle(snapped)) return null;
+
+      const obstacle = { id: this.nextObstacleId++, position: { x: snapped.x, y: 0, z: snapped.z }, width: OBSTACLE_SIZE, depth: OBSTACLE_SIZE };
+      this.obstacles.push(obstacle);
+      this.obstacleRevision++;
+      for (const unit of this.units) this.clearPath(unit);
+      this.updatePerception();
+      return obstacle;
+    }
+
+    canPlaceObstacle(position) {
+      const halfSize = OBSTACLE_SIZE / 2;
+      if (position.x - halfSize < 0 || position.x + halfSize > WORLD_WIDTH || position.z - halfSize < 0 || position.z + halfSize > WORLD_DEPTH) return false;
+      if (this.obstacles.some(obstacle => Math.abs(position.x - obstacle.position.x) < halfSize + obstacle.width / 2 && Math.abs(position.z - obstacle.position.z) < halfSize + obstacle.depth / 2)) return false;
+      if (this.units.some(unit => unit.alive && Math.abs(position.x - unit.position.x) < halfSize + unit.navigationRadius + 1 && Math.abs(position.z - unit.position.z) < halfSize + unit.navigationRadius + 1)) return false;
+      if (this.guardPoints.some(point => Math.abs(position.x - point.position.x) < halfSize + 1 && Math.abs(position.z - point.position.z) < halfSize + 1)) return false;
+      return !Object.values(HEADQUARTERS).some(headquarters => Math.abs(position.x - headquarters.position.x) < halfSize + 7 && Math.abs(position.z - headquarters.position.z) < halfSize + 7);
+    }
+
+    captureLevel() {
+      return {
+        obstacles: this.obstacles.map(obstacle => ({
+          id: obstacle.id,
+          position: { x: obstacle.position.x, z: obstacle.position.z },
+          width: obstacle.width,
+          depth: obstacle.depth
+        })),
+        guardPoints: this.guardPoints.map(point => ({
+          id: point.id,
+          team: point.team,
+          position: { x: point.position.x, z: point.position.z },
+          heading: point.heading
+        }))
+      };
+    }
+
+    applyLevel(levelData) {
+      const obstacles = Array.isArray(levelData?.obstacles) ? levelData.obstacles : [];
+      const guardPoints = Array.isArray(levelData?.guardPoints) ? levelData.guardPoints : [];
+      this.obstacles = obstacles.map((obstacle, index) => {
+        const width = Math.min(WORLD_WIDTH, Math.max(0.1, Number(obstacle.width) || OBSTACLE_SIZE));
+        const depth = Math.min(WORLD_DEPTH, Math.max(0.1, Number(obstacle.depth) || OBSTACLE_SIZE));
+        return {
+          id: index + 1,
+          position: {
+            x: window.clamp(Number(obstacle.position?.x) || 0, width / 2, WORLD_WIDTH - width / 2),
+            y: 0,
+            z: window.clamp(Number(obstacle.position?.z) || 0, depth / 2, WORLD_DEPTH - depth / 2)
+          },
+          width,
+          depth
+        };
+      });
+      this.guardPoints = guardPoints.filter(point => TEAM[point.team]).map((point, index) => ({
+        id: index + 1,
+        team: point.team,
+        teamId: TEAM[point.team].id,
+        position: {
+          x: window.clamp(Number(point.position?.x) || 0, 0, WORLD_WIDTH),
+          y: 0,
+          z: window.clamp(Number(point.position?.z) || 0, 0, WORLD_DEPTH)
+        },
+        heading: Number(point.heading) || 0,
+        claimedBy: null
+      }));
+      this.nextObstacleId = this.obstacles.length + 1;
+      this.nextGuardPointId = this.guardPoints.length + 1;
+      this.obstacleRevision++;
+      for (const unit of this.units) {
+        unit.guardPointId = null;
+        unit.moveDestination = null;
+        unit.moveState = STATE.MOVEMENT.SELECTING;
+        unit.moveWaitRemaining = 0;
+        this.clearPath(unit);
       }
-      unit.heading = Math.atan2(dz, dx);
-      unit.velocity.x = (dx / distance) * unit.moveSpeed;
-      unit.velocity.z = (dz / distance) * unit.moveSpeed;
-      return false;
+      this.updateRevealMap();
+      this.updatePerception();
+    }
+
+    clearPath(unit) {
+      this.navigation.clearPath(unit, this.obstacleRevision);
+    }
+
+    segmentObstacleHit(start, end, obstacle, padding = 0) {
+      return this.navigation.segmentObstacleHit(start, end, obstacle, padding);
+    }
+
+    moveTowards(unit, destination, delta) {
+      return this.navigation.moveTowards(unit, destination, delta, this.obstacles, this.obstacleRevision);
     }
 
     rotateTowardsHeading(unit, targetHeading, delta) {
@@ -150,6 +247,7 @@
       }
       unit.movementBehavior = behavior;
       unit.moveDestination = null;
+      this.clearPath(unit);
       unit.moveState = STATE.MOVEMENT.SELECTING;
       unit.moveWaitRemaining = 0;
     }
@@ -243,42 +341,54 @@
       const dz = end.z - start.z;
       const lengthSquared = dx * dx + dz * dz;
       if (!lengthSquared) return true;
+      if (this.obstacles.some(obstacle => this.segmentObstacleHit(start, end, obstacle) !== null)) return false;
       return !this.units.some(unit => {
         if (!unit.alive || unit === observer || unit === intendedTarget) return false;
         const t = Math.max(0, Math.min(1, ((unit.position.x - start.x) * dx + (unit.position.z - start.z) * dz) / lengthSquared));
         const px = start.x + t * dx - unit.position.x;
         const pz = start.z + t * dz - unit.position.z;
-        return px * px + pz * pz < 1.7 * 1.7;
+        const radius = unit.radius ?? 1.7;
+        return px * px + pz * pz < radius * radius;
       });
     }
 
     trace(start, end, ownerId = null, kind = TRACE.MANUAL) {
       let hit = null;
+      let hitObstacle = null;
       let hitDistance = 1;
       const dx = end.x - start.x;
       const dz = end.z - start.z;
       const rayLengthSquared = dx * dx + dz * dz;
+      for (const obstacle of this.obstacles) {
+        const distance = this.segmentObstacleHit(start, end, obstacle);
+        if (distance !== null && distance < hitDistance) {
+          hitObstacle = obstacle;
+          hitDistance = distance;
+        }
+      }
       for (const unit of this.units) {
         if (!unit.alive || unit.id === ownerId || !rayLengthSquared) continue;
         const t = ((unit.position.x - start.x) * dx + (unit.position.z - start.z) * dz) / rayLengthSquared;
         if (t < 0 || t > hitDistance) continue;
         const px = start.x + t * dx - unit.position.x;
         const pz = start.z + t * dz - unit.position.z;
-        if (px * px + pz * pz < 1.7 * 1.7) {
+        const radius = unit.radius ?? 1.7;
+        if (px * px + pz * pz < radius * radius) {
           hit = unit;
+          hitObstacle = null;
           hitDistance = t;
         }
       }
       const trace = {
         id: `${this.elapsed}-${Math.random()}`,
         start: { x: start.x, z: start.z },
-        end: hit ? { x: start.x + dx * hitDistance, z: start.z + dz * hitDistance } : { x: end.x, z: end.z },
+        end: hit || hitObstacle ? { x: start.x + dx * hitDistance, z: start.z + dz * hitDistance } : { x: end.x, z: end.z },
         kind,
         hitId: hit?.id ?? null,
         life: kind === TRACE.MANUAL ? 4 : 0.48
       };
       this.traces.push(trace);
-      return { trace, hit };
+      return { trace, hit, obstacle: hitObstacle };
     }
 
     update(delta) {
@@ -429,6 +539,7 @@
       this.camera = camera;
       this.showRanges = false;
       this.showSight = true;
+      this.showPaths = false;
       this.showFog = false;
       this.fogOfWarTeam = null;
       this.fogHideInvisible = false;
@@ -439,6 +550,7 @@
       this.pendingGuardTeam = null;
       this.pendingGuardHeading = 0;
       this.pendingGuardHeadingManual = false;
+      this.pendingObstaclePoint = null;
       this.theme = {};
       this.refreshTheme();
     }
@@ -492,6 +604,8 @@
         this.drawArena(scale);
         this.drawHeadquarters(scale);
       }
+      this.drawObstacles(scale);
+      this.drawPaths();
       this.drawMoveDestinations(scale);
       this.drawGuardPoints(scale);
       this.drawSightLines();
@@ -501,6 +615,7 @@
       if (this.showFog && this.fogOfWarTeam !== null) this.drawFogOfWar();
       if (this.manualStart) this.drawManualPreview();
       if (this.pendingGuardPoint) this.drawGuardPreview();
+      if (this.pendingObstaclePoint) this.drawObstaclePreview();
     }
 
     drawIsoArena(scale) {
@@ -558,6 +673,64 @@
         this.context.font = '600 9px "DM Mono", monospace';
         this.context.textAlign = 'center';
         this.context.fillText(headquarters.label.toUpperCase(), point.x, point.y + height + 14);
+      }
+    }
+
+    drawObstacles(scale) {
+      const context = this.context;
+      for (const obstacle of this.world.obstacles) {
+        if (this.camera.view === 'iso') {
+          const point = this.camera.worldToScreen(obstacle.position);
+          this.drawIsoBox(point, obstacle.width * scale * 0.5, obstacle.depth * scale * 0.26, Math.max(7, scale * 5), '#75624f');
+          continue;
+        }
+        const topLeft = this.camera.worldToScreen({ x: obstacle.position.x - obstacle.width / 2, z: obstacle.position.z - obstacle.depth / 2 });
+        const bottomRight = this.camera.worldToScreen({ x: obstacle.position.x + obstacle.width / 2, z: obstacle.position.z + obstacle.depth / 2 });
+        context.fillStyle = '#75624f';
+        context.fillRect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
+        context.strokeStyle = '#c5ad8f';
+        context.lineWidth = 1.3;
+        context.strokeRect(topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y);
+        context.strokeStyle = 'rgba(255,255,255,.13)';
+        context.beginPath();
+        context.moveTo(topLeft.x, topLeft.y);
+        context.lineTo(bottomRight.x, bottomRight.y);
+        context.moveTo(bottomRight.x, topLeft.y);
+        context.lineTo(topLeft.x, bottomRight.y);
+        context.stroke();
+      }
+    }
+
+    drawPaths() {
+      if (!this.showPaths) return;
+      const context = this.context;
+      const fogActive = this.showFog && this.fogOfWarTeam !== FOG.OFF;
+      for (const unit of this.world.units) {
+        if (!unit.alive || unit.pathIndex >= unit.path.length) continue;
+        const visible = !fogActive || this.isVisibleToTeam(unit, this.fogOfWarTeam);
+        if (fogActive && !visible && this.fogHideInvisible) continue;
+        const points = [unit.position, ...unit.path.slice(unit.pathIndex)];
+        context.save();
+        context.globalAlpha = fogActive && !visible ? 0.12 : 0.58;
+        context.strokeStyle = TEAM[unit.team].color;
+        context.lineWidth = 1.5;
+        context.setLineDash([5, 4]);
+        context.beginPath();
+        points.forEach((point, index) => {
+          const screen = this.camera.worldToScreen(point);
+          if (index === 0) context.moveTo(screen.x, screen.y);
+          else context.lineTo(screen.x, screen.y);
+        });
+        context.stroke();
+        context.setLineDash([]);
+        for (const point of points.slice(1, -1)) {
+          const screen = this.camera.worldToScreen(point);
+          context.beginPath();
+          context.arc(screen.x, screen.y, 2.3, 0, Math.PI * 2);
+          context.fillStyle = TEAM[unit.team].color;
+          context.fill();
+        }
+        context.restore();
       }
     }
 
@@ -660,6 +833,31 @@
       context.fillText(`GUARD POINT · ${teamLabel} · SCROLL TO ROTATE`, screen.x, screen.y - radius - 10);
     }
 
+    drawObstaclePreview() {
+      const point = this.pendingObstaclePoint;
+      const valid = this.world.canPlaceObstacle(point);
+      const half = OBSTACLE_SIZE / 2;
+      const corners = [
+        this.camera.worldToScreen({ x: point.x - half, z: point.z - half }),
+        this.camera.worldToScreen({ x: point.x + half, z: point.z - half }),
+        this.camera.worldToScreen({ x: point.x + half, z: point.z + half }),
+        this.camera.worldToScreen({ x: point.x - half, z: point.z + half })
+      ];
+      const context = this.context;
+      context.save();
+      context.globalAlpha = 0.7;
+      context.fillStyle = valid ? 'rgba(167,137,105,.42)' : 'rgba(224,91,67,.36)';
+      context.strokeStyle = valid ? '#c5ad8f' : '#e05b43';
+      context.lineWidth = 1.5;
+      context.setLineDash([5, 3]);
+      context.beginPath();
+      corners.forEach((corner, index) => index ? context.lineTo(corner.x, corner.y) : context.moveTo(corner.x, corner.y));
+      context.closePath();
+      context.fill();
+      context.stroke();
+      context.restore();
+    }
+
     drawIsoBox(point, width, depth, height, color) {
       const context = this.context;
       const top = { x: point.x, y: point.y - height };
@@ -680,7 +878,7 @@
         const isVisible = !fogActive || this.isVisibleToTeam(unit, this.fogOfWarTeam);
         if (fogActive && !isVisible && this.fogHideInvisible) continue;
         const point = this.camera.worldToScreen(unit.position);
-        const radius = Math.max(6, scale * 1.7);
+        const radius = Math.max(6, scale * unit.radius);
         const height = Math.max(11, scale * 5.3);
         const color = unit.alive ? TEAM[unit.team].color : '#75817b';
         const alpha = fogActive ? (isVisible ? 1 : 0.18) : 1;
@@ -969,7 +1167,7 @@
         const isVisible = !fogActive || this.isVisibleToTeam(unit, this.fogOfWarTeam);
         if (fogActive && !isVisible && this.fogHideInvisible) continue;
         const point = this.camera.worldToScreen(unit.position);
-        const radius = Math.max(minRadius, scale * 1.65);
+        const radius = Math.max(minRadius, scale * unit.radius);
         const team = TEAM[unit.team];
         const selected = unit.id === this.selectedId;
         const alpha = fogActive ? (isVisible ? 1 : 0.18) : 1;
@@ -1062,7 +1260,15 @@
   }
 
   const canvas = document.querySelector('#worldCanvas');
+  const levelStorage = new LevelStorage();
   const world = new World();
+  let startupDefaultLevel = null;
+  try {
+    startupDefaultLevel = levelStorage.getDefaultLevel();
+    if (startupDefaultLevel) world.applyLevel(startupDefaultLevel.save);
+  } catch (error) {
+    console.warn('Unable to load the default level', error);
+  }
   const camera = new Camera();
   const renderer = new Renderer(canvas, world, camera);
   const ui = {
@@ -1082,7 +1288,15 @@
     traceButton: document.querySelector('#traceButton'),
     buildGuardPointEmber: document.querySelector('#buildGuardPointEmber'),
     buildGuardPointTide: document.querySelector('#buildGuardPointTide'),
+    buildObstacle: document.querySelector('#buildObstacle'),
     buildHint: document.querySelector('#buildHint'),
+    levelNameInput: document.querySelector('#levelNameInput'),
+    savedLevelSelect: document.querySelector('#savedLevelSelect'),
+    newLevelButton: document.querySelector('#newLevelButton'),
+    saveLevelButton: document.querySelector('#saveLevelButton'),
+    loadLevelButton: document.querySelector('#loadLevelButton'),
+    defaultLevelButton: document.querySelector('#defaultLevelButton'),
+    deleteLevelButton: document.querySelector('#deleteLevelButton'),
     themeToggle: document.querySelector('#themeToggle'),
     themeToggleIcon: document.querySelector('#themeToggleIcon'),
     topViewButton: document.querySelector('#topViewButton'),
@@ -1100,6 +1314,7 @@
 
   const uiController = new window.UiController(ui);
   let selectedId = 1;
+  let selectedLevelId = startupDefaultLevel?.id ?? null;
   let activeTool = null;
   let pendingGuardTeam = null;
   let lastGuardHeadingByTeam = { Ember: null, Tide: null };
@@ -1130,6 +1345,61 @@
     ui.toast.classList.add('visible');
     clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => ui.toast.classList.remove('visible'), 1800);
+  }
+
+  function refreshLevelLibrary(preferredId = selectedLevelId) {
+    let levels;
+    try {
+      levels = levelStorage.listLevels();
+    } catch (error) {
+      console.warn('Unable to read saved levels', error);
+      showToast('LEVEL STORAGE UNAVAILABLE');
+      levels = [];
+    }
+
+    const placeholder = new Option(levels.length ? 'Select a saved level' : 'No saved levels', '');
+    ui.savedLevelSelect.replaceChildren(placeholder);
+    for (const level of levels) {
+      const option = new Option(`${level.isDefault ? '★ ' : ''}${level.name}`, level.id);
+      ui.savedLevelSelect.append(option);
+    }
+
+    const selected = levels.find(level => level.id === preferredId) ?? null;
+    selectedLevelId = selected?.id ?? null;
+    ui.savedLevelSelect.value = selectedLevelId ?? '';
+    ui.loadLevelButton.disabled = !selected;
+    ui.defaultLevelButton.disabled = !selected;
+    ui.deleteLevelButton.disabled = !selected;
+    ui.defaultLevelButton.textContent = selected?.isDefault ? 'CLEAR DEFAULT' : 'SET DEFAULT';
+    ui.defaultLevelButton.dataset.default = String(Boolean(selected?.isDefault));
+    if (selected) ui.levelNameInput.value = selected.name;
+    return levels;
+  }
+
+  function loadLevelRecord(record, message) {
+    world.reset();
+    world.applyLevel(record.save);
+    selectedLevelId = record.id;
+    selectedId = world.units[0]?.id ?? null;
+    events = [];
+    setActiveTool(null, null, false);
+    refreshLevelLibrary(record.id);
+    addEvent(message, 'info');
+    renderUI();
+  }
+
+  function loadDefaultLevelOnReset() {
+    let defaultLevel = null;
+    try {
+      defaultLevel = levelStorage.getDefaultLevel();
+    } catch (error) {
+      console.warn('Unable to load the default level', error);
+      showToast('DEFAULT LEVEL UNAVAILABLE');
+    }
+    world.reset();
+    if (defaultLevel) world.applyLevel(defaultLevel.save);
+    selectedLevelId = defaultLevel?.id ?? null;
+    return defaultLevel;
   }
 
   function setZoom(value) {
@@ -1168,6 +1438,7 @@
     pendingGuardTeam = tool === TOOL.GUARD ? team : FOG.OFF;
     renderer.manualStart = null;
     renderer.pendingGuardPoint = null;
+    renderer.pendingObstaclePoint = null;
     renderer.pendingGuardTeam = pendingGuardTeam;
     const savedHeading = tool === TOOL.GUARD && team ? lastGuardHeadingByTeam[team] : null;
     renderer.pendingGuardHeading = savedHeading ?? 0;
@@ -1177,11 +1448,15 @@
     ui.traceHint.textContent = 'SELECT TRACE START POINT';
     ui.buildGuardPointEmber.setAttribute('aria-pressed', String(tool === TOOL.GUARD && team === TEAMS.EMBER));
     ui.buildGuardPointTide.setAttribute('aria-pressed', String(tool === TOOL.GUARD && team === TEAMS.TIDE));
+    ui.buildObstacle.setAttribute('aria-pressed', String(tool === TOOL.OBSTACLE));
     const teamLabel = team ? HEADQUARTERS[team].label.replace(' HQ', '').toUpperCase() : '';
-    ui.buildHint.textContent = tool === TOOL.GUARD ? `CLICK TO PLACE ${teamLabel} GUARD POINT · SCROLL TO ROTATE · RIGHT-CLICK TO CANCEL` : 'Select an item, click the map to place it';
+    ui.buildHint.textContent = tool === TOOL.GUARD
+      ? `CLICK TO PLACE ${teamLabel} GUARD POINT · SCROLL TO ROTATE · RIGHT-CLICK TO CANCEL`
+      : tool === TOOL.OBSTACLE ? 'CLICK TO PLACE 12 × 12 M OBSTACLES · RIGHT-CLICK TO CANCEL' : 'Select an item, click the map to place it';
     if (!announce) return;
     if (tool === TOOL.TRACE) showToast('LINE TRACE · SELECT START POINT');
     if (tool === TOOL.GUARD) showToast(`${teamLabel} GUARD POINT · CLICK TO PLACE`);
+    if (tool === TOOL.OBSTACLE) showToast('OBSTACLE · CLICK TO PLACE');
   }
 
   function handleCanvasClick(point) {
@@ -1196,6 +1471,9 @@
         if (result.hit) {
           showToast(`TRACE HIT ${result.hit.label} · ${result.hit.health.toFixed(0)} HP`);
           addEvent(`Manual trace hit <strong>${result.hit.label}</strong>`, EVENT.TRACE);
+        } else if (result.obstacle) {
+          showToast(`TRACE BLOCKED · OBSTACLE ${String(result.obstacle.id).padStart(2, '0')}`);
+          addEvent(`Manual trace blocked by obstacle #${result.obstacle.id}`, EVENT.TRACE);
         } else {
           showToast('TRACE COMPLETE · NO HIT');
           addEvent('Manual line trace completed · no hit', EVENT.TRACE);
@@ -1204,10 +1482,26 @@
       return;
     }
 
+    if (activeTool === TOOL.OBSTACLE) {
+      const obstacle = world.addObstacle(worldPoint);
+      if (!obstacle) {
+        showToast('OBSTACLE CANNOT BE PLACED HERE');
+      } else {
+        showToast(`OBSTACLE ${String(obstacle.id).padStart(2, '0')} PLACED`);
+        addEvent(`Obstacle #${obstacle.id} placed at (${obstacle.position.x.toFixed(0)}, ${obstacle.position.z.toFixed(0)})`, 'info');
+      }
+      setActiveTool(TOOL.OBSTACLE, null, false);
+      return;
+    }
+
     if (activeTool === TOOL.GUARD) {
       const team = pendingGuardTeam;
       const heading = renderer.pendingGuardHeading;
       const pointResult = world.addGuardPoint(clampToArena(worldPoint), team, heading);
+      if (!pointResult) {
+        showToast('GUARD POINT CANNOT BE PLACED INSIDE AN OBSTACLE');
+        return;
+      }
       lastGuardHeadingByTeam[team] = heading;
       showToast(`GUARD POINT PLACED · ${HEADQUARTERS[pointResult.team].label.toUpperCase()}`);
       setActiveTool(TOOL.GUARD, team, false);
@@ -1225,6 +1519,7 @@
   window.addEventListener('resize', () => renderer.resize());
   new ResizeObserver(() => renderer.resize()).observe(canvas);
   renderer.resize();
+  refreshLevelLibrary();
   renderUI();
   uiController.renderEvents(events);
 
@@ -1248,12 +1543,14 @@
   });
 
   document.querySelector('#resetButton').addEventListener('click', () => {
-    world.reset();
+    const defaultLevel = loadDefaultLevelOnReset();
+    setActiveTool(null, null, false);
     selectedId = world.units[0].id;
     events = [];
-    addEvent('Simulation reset · four agents deployed at HQ', 'info');
+    refreshLevelLibrary(defaultLevel?.id ?? null);
+    addEvent(defaultLevel ? `Simulation reset · default level <strong>${defaultLevel.name}</strong> loaded` : 'Simulation reset · four agents deployed at HQ', 'info');
     renderUI();
-    showToast('SIMULATION RESET');
+    showToast(defaultLevel ? `RESET · ${defaultLevel.name.toUpperCase()}` : 'SIMULATION RESET');
   });
 
   let spawnType = BEHAVIOR.MOVEMENT.ROAM;
@@ -1280,8 +1577,83 @@
   ui.traceButton.addEventListener('click', () => setActiveTool(activeTool === TOOL.TRACE ? null : TOOL.TRACE));
   ui.buildGuardPointEmber.addEventListener('click', () => setActiveTool(activeTool === TOOL.GUARD && pendingGuardTeam === TEAMS.EMBER ? null : TOOL.GUARD, TEAMS.EMBER));
   ui.buildGuardPointTide.addEventListener('click', () => setActiveTool(activeTool === TOOL.GUARD && pendingGuardTeam === TEAMS.TIDE ? null : TOOL.GUARD, TEAMS.TIDE));
+  ui.buildObstacle.addEventListener('click', () => setActiveTool(activeTool === TOOL.OBSTACLE ? null : TOOL.OBSTACLE));
+  ui.savedLevelSelect.addEventListener('change', () => {
+    selectedLevelId = ui.savedLevelSelect.value || null;
+    if (selectedLevelId) refreshLevelLibrary(selectedLevelId);
+    else {
+      ui.levelNameInput.value = '';
+      refreshLevelLibrary(null);
+    }
+  });
+  ui.newLevelButton.addEventListener('click', () => {
+    selectedLevelId = null;
+    ui.savedLevelSelect.value = '';
+    ui.levelNameInput.value = '';
+    ui.loadLevelButton.disabled = true;
+    ui.defaultLevelButton.disabled = true;
+    ui.deleteLevelButton.disabled = true;
+    ui.defaultLevelButton.textContent = 'SET DEFAULT';
+    ui.defaultLevelButton.dataset.default = 'false';
+    ui.levelNameInput.focus();
+  });
+  ui.saveLevelButton.addEventListener('click', () => {
+    try {
+      const saved = levelStorage.saveLevel(ui.levelNameInput.value, world.captureLevel(), selectedLevelId);
+      selectedLevelId = saved.id;
+      refreshLevelLibrary(saved.id);
+      addEvent(`Level <strong>${saved.name}</strong> saved · obstacles and guard points`, 'info');
+      showToast(`LEVEL SAVED · ${saved.name.toUpperCase()}`);
+    } catch (error) {
+      console.warn('Unable to save level', error);
+      showToast(error.message.toUpperCase());
+    }
+  });
+  ui.loadLevelButton.addEventListener('click', () => {
+    if (!selectedLevelId) return;
+    try {
+      const level = levelStorage.getLevel(selectedLevelId);
+      if (!level) throw new Error('Saved level not found');
+      loadLevelRecord(level, `Level <strong>${level.name}</strong> loaded`);
+      showToast(`LEVEL LOADED · ${level.name.toUpperCase()}`);
+    } catch (error) {
+      console.warn('Unable to load level', error);
+      showToast(error.message.toUpperCase());
+    }
+  });
+  ui.defaultLevelButton.addEventListener('click', () => {
+    if (!selectedLevelId) return;
+    try {
+      const selected = levelStorage.listLevels().find(level => level.id === selectedLevelId);
+      levelStorage.setDefaultLevel(selected?.isDefault ? null : selectedLevelId);
+      refreshLevelLibrary(selectedLevelId);
+      showToast(selected?.isDefault ? 'DEFAULT LEVEL CLEARED' : 'DEFAULT LEVEL SET');
+    } catch (error) {
+      console.warn('Unable to set default level', error);
+      showToast(error.message.toUpperCase());
+    }
+  });
+  ui.deleteLevelButton.addEventListener('click', () => {
+    if (!selectedLevelId) return;
+    try {
+      const level = levelStorage.listLevels().find(candidate => candidate.id === selectedLevelId);
+      if (!level || !window.confirm(`Delete saved level “${level.name}”?`)) return;
+      levelStorage.deleteLevel(selectedLevelId);
+      selectedLevelId = null;
+      ui.levelNameInput.value = '';
+      refreshLevelLibrary(null);
+      showToast('LEVEL DELETED');
+    } catch (error) {
+      console.warn('Unable to delete level', error);
+      showToast(error.message.toUpperCase());
+    }
+  });
+  ui.levelNameInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') ui.saveLevelButton.click();
+  });
   document.querySelector('#rangesToggle').addEventListener('change', event => { renderer.showRanges = event.target.checked; });
   document.querySelector('#sightToggle').addEventListener('change', event => { renderer.showSight = event.target.checked; });
+  document.querySelector('#pathsToggle').addEventListener('change', event => { renderer.showPaths = event.target.checked; });
   document.querySelector('#fogHideToggle').addEventListener('change', event => { renderer.fogHideInvisible = event.target.checked; });
   document.querySelector('#fogOffButton').addEventListener('click', () => setFogOfWarTeam(null));
   document.querySelector('#fogEmberButton').addEventListener('click', () => setFogOfWarTeam(TEAMS.EMBER));
@@ -1317,6 +1689,7 @@
     const point = canvasPoint(event);
     const worldPoint = camera.screenToWorld(point);
     renderer.cursorWorld = worldPoint;
+    if (activeTool === TOOL.OBSTACLE) renderer.pendingObstaclePoint = world.snapObstaclePosition(worldPoint);
     if (activeTool === TOOL.GUARD) {
       renderer.pendingGuardPoint = clampToArena(worldPoint);
       if (!renderer.pendingGuardHeadingManual) {

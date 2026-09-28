@@ -12,7 +12,7 @@
     }),
     TRACE: Object.freeze({ MANUAL: 'manual', COMBAT: 'combat' }),
     EVENT: Object.freeze({ COMBAT: 'combat', TRACE: 'trace' }),
-    TOOL: Object.freeze({ TRACE: 'trace', GUARD: 'guard' }),
+    TOOL: Object.freeze({ TRACE: 'trace', GUARD: 'guard', OBSTACLE: 'obstacle' }),
     FOG: Object.freeze({ OFF: null })
   });
 

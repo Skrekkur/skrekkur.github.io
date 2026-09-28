@@ -19,13 +19,13 @@
       unit.combatState = STATE.COMBAT.APPROACH;
       unit.stateTimer = 0;
       unit.shotsRemaining = 0;
-      unit.velocity.x = (dx / distance) * unit.moveSpeed;
-      unit.velocity.z = (dz / distance) * unit.moveSpeed;
+      world.moveTowards(unit, target.position, delta);
       return;
     }
 
     unit.velocity.x = 0;
     unit.velocity.z = 0;
+    world.clearPath(unit);
 
     if (unit.combatState === STATE.COMBAT.APPROACH) {
       unit.combatState = STATE.COMBAT.STOP_DELAY;

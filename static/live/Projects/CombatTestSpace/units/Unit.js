@@ -11,6 +11,8 @@
       this.maxHealth = 100;
       this.perceptionRange = 35;
       this.moveSpeed = 4.2;
+      this.radius = 1.7;
+      this.navigationRadius = this.radius + 0.3;
       this.attackRange = this.perceptionRange * 2;
       this.perceivedEnemies = [];
       this.targetId = null;
@@ -27,6 +29,11 @@
       this.guardPointId = null;
       this.scoutEscapePoint = null;
       this.moveDestination = null;
+      this.path = [];
+      this.pathIndex = 0;
+      this.pathDestination = null;
+      this.pathRevision = -1;
+      this.pathRadius = null;
       this.moveState = STATE.MOVEMENT.SELECTING;
       this.moveWaitRemaining = 0;
       this.movementConfig = { waitTime: 2 };
