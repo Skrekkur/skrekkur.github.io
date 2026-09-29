@@ -172,6 +172,15 @@ button { color: inherit; }
 .corner-tr { top: 0; right: 0; border-top: 2px solid #547a64; border-right: 2px solid #547a64; }
 .corner-bl { bottom: 0; left: 0; border-bottom: 2px solid #547a64; border-left: 2px solid #547a64; }
 .corner-br { bottom: 0; right: 0; border-bottom: 2px solid #547a64; border-right: 2px solid #547a64; }
+.perception-debug { position: absolute; top: 50px; left: 14px; z-index: 2; width: min(350px, calc(100% - 75px)); max-height: calc(100% - 90px); padding: 10px; overflow: auto; background: var(--canvas-overlay-bg); border: 1px solid rgba(84, 122, 100, .55); color: var(--ink-strong); font: 9px/1.45 var(--mono); pointer-events: none; }
+.perception-debug[hidden] { display: none; }
+.perception-debug-heading { margin-bottom: 7px; padding-bottom: 6px; border-bottom: 1px solid var(--line); color: var(--mint-strong); font-weight: 700; letter-spacing: .6px; }
+.perception-debug-summary { margin-bottom: 7px; color: var(--ink-soft); }
+.perception-debug-row { padding: 6px 0; border-top: 1px solid var(--line-soft); }
+.perception-debug-row:first-of-type { border-top: 0; }
+.perception-debug-status { display: block; margin-top: 2px; color: var(--ink-faint); }
+.perception-debug-status.ok { color: var(--mint-strong); }
+.perception-debug-status.blocked { color: var(--coral); }
 .canvas-stamp { position: absolute; top: 13px; left: 14px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; background: var(--canvas-overlay-bg); color: var(--ink-strong); font-size: 9px; pointer-events: none; }
 .stamp-dot { width: 6px; height: 6px; }
 .compass { position: absolute; top: 13px; right: 14px; display: grid; justify-items: center; gap: 2px; width: 29px; height: 38px; padding-top: 5px; background: var(--canvas-overlay-bg); color: var(--ink-strong); pointer-events: none; }

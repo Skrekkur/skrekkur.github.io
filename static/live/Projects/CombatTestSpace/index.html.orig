@@ -54,7 +54,6 @@
           <label class="switch-row"><input id="sightToggle" type="checkbox" checked><span class="switch"></span><span>Sight lines</span></label>
           <label class="switch-row"><input id="pathsToggle" type="checkbox"><span class="switch"></span><span>Paths</span></label>
           <button id="navigationGridButton" class="view-button" type="button" aria-pressed="false" title="Visualize the navigation grid for the selected unit">NAV GRID</button>
-          <button id="perceptionDebugButton" class="view-button" type="button" aria-pressed="false" title="Inspect perception checks for the selected unit">PERCEPT DEBUG</button>
           <div class="view-toggle" role="group" aria-label="Fog of war team view">
             <button id="fogOffButton" class="view-button active" type="button">FOG OFF</button>
             <button id="fogEmberButton" class="view-button" type="button">FOG T1</button>
@@ -88,10 +87,6 @@
           <div id="canvasFrame" class="canvas-frame">
             <canvas id="worldCanvas" aria-label="Top-down view of the combat arena"></canvas>
             <div class="canvas-corner corner-tl"></div><div class="canvas-corner corner-tr"></div><div class="canvas-corner corner-bl"></div><div class="canvas-corner corner-br"></div>
-            <section id="perceptionDebugPanel" class="perception-debug" aria-label="Perception diagnostics" hidden>
-              <div class="perception-debug-heading">PERCEPTION DEBUG</div>
-              <div id="perceptionDebugContent"></div>
-            </section>
             <div id="traceHint" class="trace-hint" hidden>SELECT TRACE START POINT</div>
             <div class="canvas-stamp"><span class="stamp-dot"></span> LIVE SIM</div>
             <div class="compass"><span>N</span><span class="compass-arrow">↑</span></div>

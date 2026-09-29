@@ -54,6 +54,10 @@
 
   global.GLOBAL_ACCURACY = { maxDeviationDegrees: 8 };
 
+  global.PERCEPTION_CONFIG = {
+    friendliesBlockSight: false
+  };
+
   global.clamp = function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
   };

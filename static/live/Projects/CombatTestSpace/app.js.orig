@@ -346,13 +346,7 @@
       return !this.units.some(unit => {
         if (!unit.alive || unit === observer || unit === intendedTarget) return false;
         if (!PERCEPTION_CONFIG.friendliesBlockSight && unit.team === observer.team) return false;
-        const targetDx = unit.position.x - intendedTarget.position.x;
-        const targetDz = unit.position.z - intendedTarget.position.z;
-        const targetRadius = intendedTarget.radius ?? 1.7;
-        const combinedRadius = (unit.radius ?? 1.7) + targetRadius;
-        if (targetDx * targetDx + targetDz * targetDz < combinedRadius * combinedRadius) return false;
-        const t = ((unit.position.x - start.x) * dx + (unit.position.z - start.z) * dz) / lengthSquared;
-        if (t <= 0 || t >= 1) return false;
+        const t = Math.max(0, Math.min(1, ((unit.position.x - start.x) * dx + (unit.position.z - start.z) * dz) / lengthSquared));
         const px = start.x + t * dx - unit.position.x;
         const pz = start.z + t * dz - unit.position.z;
         const radius = unit.radius ?? 1.7;
@@ -1394,13 +1388,7 @@
     const blockingUnit = world.units.find(candidate => {
       if (!candidate.alive || candidate === observer || candidate === target) return false;
       if (!PERCEPTION_CONFIG.friendliesBlockSight && candidate.team === observer.team) return false;
-      const targetDx = candidate.position.x - target.position.x;
-      const targetDz = candidate.position.z - target.position.z;
-      const targetRadius = target.radius ?? 1.7;
-      const combinedRadius = (candidate.radius ?? 1.7) + targetRadius;
-      if (targetDx * targetDx + targetDz * targetDz < combinedRadius * combinedRadius) return false;
-      const t = ((candidate.position.x - observer.position.x) * dx + (candidate.position.z - observer.position.z) * dz) / lengthSquared;
-      if (t <= 0 || t >= 1) return false;
+      const t = Math.max(0, Math.min(1, ((candidate.position.x - observer.position.x) * dx + (candidate.position.z - observer.position.z) * dz) / lengthSquared));
       const nearestX = observer.position.x + t * dx;
       const nearestZ = observer.position.z + t * dz;
       const offsetX = nearestX - candidate.position.x;
