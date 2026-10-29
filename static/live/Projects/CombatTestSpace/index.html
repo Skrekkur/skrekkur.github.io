@@ -9,11 +9,16 @@
     <script src="config.js" defer></script>
     <script src="core/GameObject.js" defer></script>
     <script src="units/Unit.js" defer></script>
+    <script src="systems/PerformanceMonitor.js" defer></script>
     <script src="systems/NavigationSystem.js" defer></script>
+    <script src="systems/ReachabilityGraph.js" defer></script>
     <script src="systems/LevelStorage.js" defer></script>
     <script src="systems/MovementProcessor.js" defer></script>
     <script src="systems/CombatProcessor.js" defer></script>
     <script src="ui/UiController.js" defer></script>
+    <script src="core/World.js" defer></script>
+    <script src="rendering/Camera.js" defer></script>
+    <script src="rendering/Renderer.js" defer></script>
     <script src="app.js" defer></script>
   </head>
   <body>
@@ -53,8 +58,11 @@
           <label class="switch-row"><input id="rangesToggle" type="checkbox"><span class="switch"></span><span>Perception</span></label>
           <label class="switch-row"><input id="sightToggle" type="checkbox" checked><span class="switch"></span><span>Sight lines</span></label>
           <label class="switch-row"><input id="pathsToggle" type="checkbox"><span class="switch"></span><span>Paths</span></label>
+          <label class="switch-row"><input id="reachabilityToggle" type="checkbox" checked><span class="switch"></span><span>Reachability</span></label>
+          <label class="switch-row"><input id="reachabilityGraphToggle" type="checkbox"><span class="switch"></span><span>Graph</span></label>
           <button id="navigationGridButton" class="view-button" type="button" aria-pressed="false" title="Visualize the navigation grid for the selected unit">NAV GRID</button>
           <button id="perceptionDebugButton" class="view-button" type="button" aria-pressed="false" title="Inspect perception checks for the selected unit">PERCEPT DEBUG</button>
+          <button id="performanceButton" class="view-button" type="button" aria-pressed="false" title="Show simulation performance timings">PERF</button>
           <div class="view-toggle" role="group" aria-label="Fog of war team view">
             <button id="fogOffButton" class="view-button active" type="button">FOG OFF</button>
             <button id="fogEmberButton" class="view-button" type="button">FOG T1</button>
@@ -71,12 +79,45 @@
 
       <section class="workspace">
         <aside class="left-rail" aria-label="Unit roster and arena settings">
-          <div class="rail-heading"><span>ROSTER</span><span id="unitCount" class="count-badge">04</span></div>
-          <div id="rosterList" class="roster-list"></div>
+          <div class="rail-heading roster-heading">
+            <button id="rosterToggleButton" class="roster-toggle" type="button" aria-expanded="false" aria-controls="rosterList"><span>ROSTER</span><span id="rosterToggleIcon" aria-hidden="true">▸</span></button>
+            <span id="unitCount" class="count-badge">04</span>
+          </div>
+          <div id="rosterList" class="roster-list" hidden></div>
           <div class="rail-section arena-section">
             <div class="rail-heading"><span>ARENA</span><span class="section-index">01</span></div>
+            <div class="arena-size-tabs" role="tablist" aria-label="World size">
+              <button id="worldSizeStandard" class="arena-size-tab active" type="button" role="tab" aria-selected="true">STANDARD</button>
+              <button id="worldSizeXl" class="arena-size-tab" type="button" role="tab" aria-selected="false">XL · 10×</button>
+            </div>
+            <div class="reachability-config">
+              <label class="reachability-method">Reachability method
+                <select id="reachabilityMethod">
+                  <option value="grid">Grid flood-fill</option>
+                  <option value="objects" selected>Per object</option>
+                </select>
+              </label>
+              <label class="reachability-method">Object algorithm
+                <select id="reachabilityAlgorithm">
+                  <option value="groundTruth" selected>Ground truth</option>
+                  <option value="graph">Guard graph</option>
+                </select>
+              </label>
+              <label class="reachability-target">
+                <span>GUARD POINTS</span>
+                <input id="reachabilityCheckUnits" type="checkbox">
+                <span class="reachability-target-switch" aria-hidden="true"></span>
+                <span>UNITS</span>
+              </label>
+              <div class="reachability-schedule">
+                <label class="reachability-auto"><input id="reachabilityAuto" type="checkbox" checked><span>AUTO</span></label>
+                <label class="reachability-interval"><span>EVERY</span><input id="reachabilityInterval" type="number" min="0.1" max="60" step="0.1" value="1"><span>s</span></label>
+                <button id="runReachabilityButton" type="button">RUN NOW</button>
+              </div>
+              <div id="reachabilityStatus" class="reachability-status">GUARDS · GROUND TRUTH · EVERY 1.0s · LAST 0.0s AGO</div>
+            </div>
             <div class="arena-value"><span>Boundary</span><strong>Rectangle</strong></div>
-            <div class="arena-value"><span>World size</span><strong>120 × 80 <i>m</i></strong></div>
+            <div class="arena-value"><span>World size</span><strong id="worldSizeValue">120 × 80 <i>m</i></strong></div>
             <div class="arena-value"><span>Wall markers</span><strong class="wall-value">Active</strong></div>
             <div class="axis-key"><span class="axis-x">X</span><span class="axis-z">Z</span><span>Ground plane</span></div>
           </div>
@@ -92,10 +133,20 @@
               <div class="perception-debug-heading">PERCEPTION DEBUG</div>
               <div id="perceptionDebugContent"></div>
             </section>
+            <section id="performancePanel" class="performance-panel" aria-label="Performance timings" hidden>
+              <div class="performance-heading">
+                <span>PERFORMANCE</span>
+                <span>ROLLING 120 SAMPLES</span>
+              </div>
+              <div class="performance-columns" aria-hidden="true">
+                <span>METRIC</span><span>NOW</span><span>AVG</span><span>MAX</span><span>CALLS</span>
+              </div>
+              <div id="performanceContent"></div>
+            </section>
             <div id="traceHint" class="trace-hint" hidden>SELECT TRACE START POINT</div>
             <div class="canvas-stamp"><span class="stamp-dot"></span> LIVE SIM</div>
             <div class="compass"><span>N</span><span class="compass-arrow">↑</span></div>
-            <div id="canvasHelp" class="canvas-help">DRAG TO PAN <span>·</span> SCROLL TO ZOOM</div>
+            <div id="canvasHelp" class="canvas-help">WASD CAMERA <span>·</span> DRAG TO PAN <span>·</span> SCROLL TO ZOOM</div>
           </div>
           <footer class="viewport-footer"><span id="simClock">T+ 00:00.0</span><span class="footer-separator"></span><span id="simStatus">Agents are acquiring targets</span><span class="footer-spacer"></span><span id="frameRate">60 FPS</span></footer>
         </section>
@@ -122,6 +173,12 @@
           <button id="buildGuardPointTide" class="build-item build-item-tide" type="button" aria-pressed="false" title="Place a Team 2 guard point">
             <span class="build-item-icon">⚑</span>
             <span class="build-item-label">Guard · T2</span>
+          </button>
+          <button id="buildMachineGunEmber" class="build-item build-item-ember" type="button" aria-pressed="false" title="Place a Team 1 machine gun guard point">
+            <span class="build-item-icon">⌖</span><span class="build-item-label">MG · T1</span>
+          </button>
+          <button id="buildMachineGunTide" class="build-item build-item-tide" type="button" aria-pressed="false" title="Place a Team 2 machine gun guard point">
+            <span class="build-item-icon">⌖</span><span class="build-item-label">MG · T2</span>
           </button>
           <button id="buildObstacle" class="build-item build-item-obstacle" type="button" aria-pressed="false" title="Place a 12 × 12 metre obstacle">
             <span class="build-item-icon">▦</span>

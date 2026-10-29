@@ -133,6 +133,11 @@ button { color: inherit; }
 .rail-heading { height: 43px; display: flex; align-items: center; justify-content: space-between; color: var(--ink-soft); border-bottom: 1px solid var(--line); }
 .left-rail > .rail-heading, .roster-list, .rail-section { padding-left: 16px; padding-right: 16px; }
 .count-badge { display: inline-grid; min-width: 21px; height: 20px; padding: 0 5px; place-items: center; background: var(--tint); color: var(--ink-soft); font: 10px var(--mono); }
+.roster-toggle { display: inline-flex; align-items: center; gap: 7px; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; letter-spacing: inherit; }
+.roster-toggle:hover { color: var(--ink-strong); }
+.roster-toggle:focus-visible { outline: 2px solid var(--mint-strong); outline-offset: 3px; }
+.roster-toggle span:last-child { width: 8px; color: var(--ink-faint); text-align: center; }
+.roster-list[hidden] { display: none; }
 .section-index { color: var(--ink-faint); }
 .roster-list { padding-top: 8px; }
 .roster-item { width: 100%; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 8px; border: 0; border-bottom: 1px solid var(--line-soft); background: transparent; text-align: left; cursor: pointer; }
@@ -146,6 +151,32 @@ button { color: inherit; }
 .roster-health.dead { color: #bd6250; }
 .rail-section { margin-top: auto; padding-bottom: 20px; }
 .rail-section .rail-heading { margin: 0 -16px 7px; padding: 0 16px; }
+.arena-size-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; margin: 10px 0 7px; padding: 3px; background: var(--tint); }
+.arena-size-tab { min-height: 27px; padding: 0 5px; border: 0; background: transparent; color: var(--ink-faint); cursor: pointer; font: 9px var(--mono); }
+.arena-size-tab:hover { color: var(--ink); }
+.arena-size-tab.active { background: var(--forest); color: white; }
+.arena-size-tab:focus-visible { outline: 2px solid var(--mint-strong); outline-offset: 1px; }
+.reachability-config { margin: 8px 0 6px; padding: 8px; border: 1px solid var(--line-soft); background: var(--tint); }
+.reachability-method { display: grid; gap: 5px; color: var(--ink-faint); font: 8px var(--mono); letter-spacing: .35px; text-transform: uppercase; }
+.reachability-method select { width: 100%; height: 27px; padding: 0 5px; border: 1px solid var(--line); border-radius: 0; background: var(--surface); color: var(--ink-strong); font: 9px var(--mono); }
+.reachability-method + .reachability-method { margin-top: 7px; }
+.reachability-method select:disabled { cursor: default; opacity: .45; }
+.reachability-target { display: flex; align-items: center; justify-content: center; gap: 5px; margin-top: 7px; color: var(--ink-faint); cursor: pointer; font: 8px var(--mono); }
+.reachability-target input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.reachability-target-switch { position: relative; width: 27px; height: 15px; flex: 0 0 auto; border-radius: 9px; background: var(--track); transition: background .15s ease; }
+.reachability-target-switch::after { position: absolute; top: 2px; left: 2px; width: 11px; height: 11px; border-radius: 50%; background: white; content: ''; transition: transform .15s ease; }
+.reachability-target input:checked + .reachability-target-switch { background: var(--mint-strong); }
+.reachability-target input:checked + .reachability-target-switch::after { transform: translateX(12px); }
+.reachability-target input:focus-visible + .reachability-target-switch { outline: 2px solid var(--mint-strong); outline-offset: 2px; }
+.reachability-schedule { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px; align-items: center; margin-top: 7px; }
+.reachability-auto { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-soft); font: 8px var(--mono); }
+.reachability-auto input { margin: 0; accent-color: var(--mint-strong); }
+.reachability-interval { min-width: 0; display: flex; align-items: center; gap: 3px; color: var(--ink-faint); font: 8px var(--mono); }
+.reachability-interval input { width: 43px; min-width: 0; height: 25px; padding: 0 4px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-strong); font: 9px var(--mono); }
+.reachability-interval input:disabled { opacity: .45; }
+#runReachabilityButton { grid-column: 1 / -1; height: 26px; border: 1px solid #38b87a77; background: var(--surface); color: var(--mint-strong); cursor: pointer; font: 8px var(--mono); letter-spacing: .4px; }
+#runReachabilityButton:hover { background: var(--tint-selected); }
+.reachability-status { margin-top: 6px; color: var(--ink-faint); font: 8px var(--mono); }
 .arena-value { min-height: 31px; display: flex; justify-content: space-between; align-items: center; color: var(--ink-soft); font-size: 10px; }
 .arena-value strong { color: var(--ink-strong); font-size: 10px; font-weight: 600; }
 .arena-value strong i { color: var(--ink-faint); font-style: normal; }
@@ -181,6 +212,17 @@ button { color: inherit; }
 .perception-debug-status { display: block; margin-top: 2px; color: var(--ink-faint); }
 .perception-debug-status.ok { color: var(--mint-strong); }
 .perception-debug-status.blocked { color: var(--coral); }
+.performance-panel { position: absolute; top: 50px; right: 14px; z-index: 2; width: min(430px, calc(100% - 28px)); max-height: calc(100% - 90px); padding: 10px; overflow: auto; background: var(--canvas-overlay-bg); border: 1px solid rgba(84, 122, 100, .55); color: var(--ink-strong); font: 9px/1.45 var(--mono); pointer-events: auto; touch-action: auto; }
+.performance-panel[hidden] { display: none; }
+.performance-heading { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 7px; padding-bottom: 6px; border-bottom: 1px solid var(--line); color: var(--mint-strong); font-weight: 700; letter-spacing: .6px; }
+.performance-heading span:last-child { color: var(--ink-faint); font-size: 8px; font-weight: 400; }
+.performance-columns, .performance-row { display: grid; grid-template-columns: minmax(105px, 1fr) repeat(4, 52px); gap: 5px; align-items: center; }
+.performance-columns { padding: 0 0 5px; color: var(--ink-faint); font-size: 8px; text-align: right; }
+.performance-columns span:first-child { text-align: left; }
+.performance-row { padding: 6px 0; border-top: 1px solid var(--line-soft); text-align: right; }
+.performance-row span:first-child { color: var(--ink-soft); text-align: left; }
+.performance-row.total span:first-child, .performance-row.total .performance-now { color: var(--mint-strong); }
+.performance-empty { padding: 7px 0 2px; color: var(--ink-faint); }
 .canvas-stamp { position: absolute; top: 13px; left: 14px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; background: var(--canvas-overlay-bg); color: var(--ink-strong); font-size: 9px; pointer-events: none; }
 .stamp-dot { width: 6px; height: 6px; }
 .compass { position: absolute; top: 13px; right: 14px; display: grid; justify-items: center; gap: 2px; width: 29px; height: 38px; padding-top: 5px; background: var(--canvas-overlay-bg); color: var(--ink-strong); pointer-events: none; }
@@ -294,9 +336,10 @@ button { color: inherit; }
   .switch-row { margin: 0 3px; gap: 5px; font-size: 9px; }
   .workspace { grid-template-columns: minmax(0, 1fr) 170px; grid-template-rows: minmax(230px, 1fr) 165px; }
   .left-rail { grid-column: 1 / -1; grid-row: 2; flex-direction: row; min-height: 0; overflow: hidden; border-top: 1px solid var(--line); border-right: 0; }
-  .left-rail > .rail-heading { width: 66px; height: auto; flex: 0 0 auto; align-items: flex-start; padding: 14px 8px; border-bottom: 0; }
-  .left-rail > .rail-heading .count-badge { display: none; }
+  .left-rail > .rail-heading { width: 82px; height: auto; flex: 0 0 auto; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 7px; padding: 14px 8px; border-bottom: 0; }
+  .left-rail > .rail-heading .count-badge { display: inline-grid; }
   .roster-list { min-width: 0; flex: 1; display: grid; grid-template-columns: 1fr 1fr; align-content: start; padding: 5px 5px 5px 0; }
+  .roster-list[hidden] { display: none; }
   .roster-item { min-height: 49px; padding: 0 5px; }
   .roster-health { display: none; }
   .rail-section, .left-rail > .rail-foot { display: none; }
@@ -344,5 +387,5 @@ button { color: inherit; }
   .workspace { grid-template-columns: minmax(0, 1fr) 148px; }
   .right-rail .rail-heading { padding: 0 7px; font-size: 7px; }
   .inspector-content { padding-right: 7px; padding-left: 7px; }
-  .left-rail > .rail-heading { width: 54px; font-size: 8px; }
+  .left-rail > .rail-heading { width: 76px; font-size: 8px; }
 }

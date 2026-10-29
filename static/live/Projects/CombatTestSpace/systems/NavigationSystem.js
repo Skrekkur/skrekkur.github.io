@@ -102,7 +102,50 @@
       return null;
     }
 
-    findPath(start, destination, obstacles = [], agentRadius = 0) {
+    findReachableCells(start, obstacles = [], agentRadius = 0) {
+      const startCell = this.nearestReachableCell(start, obstacles, agentRadius);
+      const reachable = new Set();
+      if (!startCell) return reachable;
+
+      const keyFor = cell => cell.z * this.columns + cell.x;
+      const queue = [startCell];
+      let queueIndex = 0;
+      reachable.add(keyFor(startCell));
+      const directions = [
+        { x: 1, z: 0 }, { x: -1, z: 0 },
+        { x: 0, z: 1 }, { x: 0, z: -1 },
+        { x: 1, z: 1 }, { x: 1, z: -1 },
+        { x: -1, z: 1 }, { x: -1, z: -1 }
+      ];
+
+      while (queueIndex < queue.length) {
+        const current = queue[queueIndex++];
+        for (const direction of directions) {
+          const next = { x: current.x + direction.x, z: current.z + direction.z };
+          const key = keyFor(next);
+          if (reachable.has(key) || this.isCellBlocked(next, obstacles, agentRadius)) continue;
+          if (direction.x && direction.z && (
+            this.isCellBlocked({ x: current.x + direction.x, z: current.z }, obstacles, agentRadius) ||
+            this.isCellBlocked({ x: current.x, z: current.z + direction.z }, obstacles, agentRadius)
+          )) continue;
+          if (!this.isClearSegment(this.cellToPoint(current), this.cellToPoint(next), obstacles, agentRadius)) continue;
+          reachable.add(key);
+          queue.push(next);
+        }
+      }
+
+      return reachable;
+    }
+
+    isPointInCellSet(point, cells) {
+      if (!cells || point.x < 0 || point.x > this.width || point.z < 0 || point.z > this.depth) return false;
+      const cell = this.pointToCell(point);
+      return cells.has(cell.z * this.columns + cell.x);
+    }
+
+    findPath(start, destination, obstacles = [], agentRadius = 0, maxExploredNodes = Infinity) {
+      const exploredNodeLimit = Number.isFinite(maxExploredNodes)
+        ? Math.max(0, Math.floor(maxExploredNodes)) : Infinity;
       if (this.isPointNavigable(destination, obstacles, agentRadius) && this.isClearSegment(start, destination, obstacles, agentRadius)) {
         return [{ x: destination.x, z: destination.z }];
       }
@@ -151,6 +194,7 @@
           if (this.isClearSegment(lastPoint, destination, obstacles, agentRadius)) path.push({ x: destination.x, z: destination.z });
           return path;
         }
+        if (closed.size >= exploredNodeLimit) return [];
         closed.add(current.key);
 
         for (const direction of directions) {

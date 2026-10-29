@@ -6,6 +6,7 @@
 
     renderRoster(world, selectedId) {
       this.ui.count.textContent = String(world.units.length).padStart(2, '0');
+      if (this.ui.roster.hidden) return;
       this.ui.roster.replaceChildren();
 
       for (const unit of world.units) {
@@ -37,8 +38,9 @@
       const combatOptions = Object.entries(global.COMBAT_BEHAVIORS).map(([key, behavior]) => `<option value="${key}"${unit.combatBehavior === key ? ' selected' : ''}>${behavior.label}</option>`).join('');
       const targetOptions = Object.entries(global.TARGET_BEHAVIORS).map(([key, behavior]) => `<option value="${key}"${unit.targetBehavior === key ? ' selected' : ''}>${behavior.label}</option>`).join('');
       const movementOptions = Object.entries(global.MOVEMENT_BEHAVIORS).map(([key, behavior]) => `<option value="${key}"${unit.movementBehavior === key ? ' selected' : ''}>${behavior.label}</option>`).join('');
+      const guardPoint = world.guardPoints.find(point => point.id === unit.guardPointId);
       const guardStatus = unit.movementBehavior === 'guard'
-        ? `<div class="target-row"><span>Guard point</span><span class="target-value">${unit.guardPointId !== null ? `#${unit.guardPointId} · ${unit.moveState === 'guarding' ? 'HOLDING' : 'EN ROUTE'}` : 'SEEKING'}</span></div>`
+        ? `<div class="target-row"><span>${guardPoint?.variant === 'machineGun' ? 'Machine gun' : 'Guard point'}</span><span class="target-value">${unit.guardPointId !== null ? `#${unit.guardPointId} · ${unit.moveState === 'guarding' ? 'HOLDING' : 'EN ROUTE'}` : 'SEEKING'}</span></div>`
         : '';
 
       this.ui.inspector.innerHTML = `

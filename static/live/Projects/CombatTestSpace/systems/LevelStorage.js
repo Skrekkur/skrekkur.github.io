@@ -1,6 +1,6 @@
 (function (global) {
-  const LIBRARY_VERSION = 1;
-  const SAVE_VERSION = 1;
+  const LIBRARY_VERSION = 2;
+  const SAVE_VERSION = 2;
   const DEFAULT_STORAGE_KEY = 'fieldwork.combat.levels';
 
   class LevelStorage {
@@ -10,7 +10,7 @@
     }
 
     createEmptyLibrary() {
-      return { version: LIBRARY_VERSION, defaultLevelId: null, levels: [] };
+      return { version: LIBRARY_VERSION, defaultLevelIds: { standard: null, xl: null }, levels: [] };
     }
 
     createId() {
@@ -33,9 +33,17 @@
       if (version > SAVE_VERSION) throw new Error(`Level save version ${version} is newer than supported version ${SAVE_VERSION}`);
       if (version === 0) {
         return {
-          version: 1,
+          version: SAVE_VERSION,
+          worldSize: source.worldSize === 'xl' ? 'xl' : 'standard',
           obstacles: source.obstacles ?? [],
           guardPoints: source.guardPoints ?? source.guardpoints ?? []
+        };
+      }
+      if (version === 1) {
+        return {
+          ...source,
+          version: SAVE_VERSION,
+          worldSize: 'standard'
         };
       }
       return source;
@@ -45,6 +53,7 @@
       const migrated = this.migrateSave(save);
       return {
         version: SAVE_VERSION,
+        worldSize: migrated.worldSize === 'xl' ? 'xl' : 'standard',
         obstacles: Array.isArray(migrated.obstacles) ? migrated.obstacles.map((obstacle, index) => ({
           id: Math.max(1, Math.round(this.finite(obstacle.id, index + 1))),
           position: { x: this.finite(obstacle.position?.x), z: this.finite(obstacle.position?.z) },
@@ -54,6 +63,7 @@
         guardPoints: Array.isArray(migrated.guardPoints) ? migrated.guardPoints.map((point, index) => ({
           id: Math.max(1, Math.round(this.finite(point.id, index + 1))),
           team: String(point.team ?? ''),
+          variant: point.variant === 'machineGun' ? 'machineGun' : 'guard',
           position: { x: this.finite(point.position?.x), z: this.finite(point.position?.z) },
           heading: this.finite(point.heading)
         })) : []
@@ -83,6 +93,15 @@
         version = 1;
       }
 
+      if (version === 1) {
+        migrated = {
+          version: 2,
+          defaultLevelIds: { standard: migrated.defaultLevelId ?? null, xl: null },
+          levels: migrated.levels
+        };
+        version = 2;
+      }
+
       const levels = Array.isArray(migrated.levels) ? migrated.levels.map((entry, index) => ({
         id: String(entry.id ?? `level-${index + 1}`),
         name: String(entry.name ?? `Level ${index + 1}`).slice(0, 40),
@@ -90,9 +109,13 @@
         updatedAt: String(entry.updatedAt ?? entry.createdAt ?? new Date(0).toISOString()),
         save: this.normalizeSave(entry.save)
       })) : [];
-      const requestedDefaultId = migrated.defaultLevelId === null || migrated.defaultLevelId === undefined ? null : String(migrated.defaultLevelId);
-      const defaultLevelId = levels.some(level => level.id === requestedDefaultId) ? requestedDefaultId : null;
-      return { version: LIBRARY_VERSION, defaultLevelId, levels };
+      const defaultLevelIds = {};
+      for (const sizeKey of ['standard', 'xl']) {
+        const requested = migrated.defaultLevelIds?.[sizeKey];
+        const requestedId = requested === null || requested === undefined ? null : String(requested);
+        defaultLevelIds[sizeKey] = levels.some(level => level.id === requestedId && level.save.worldSize === sizeKey) ? requestedId : null;
+      }
+      return { version: LIBRARY_VERSION, defaultLevelIds, levels };
     }
 
     readLibrary() {
@@ -111,14 +134,15 @@
       return normalized;
     }
 
-    listLevels() {
+    listLevels(worldSize = null) {
       const library = this.readLibrary();
-      return library.levels.map(level => ({
+      return library.levels.filter(level => !worldSize || level.save.worldSize === worldSize).map(level => ({
         id: level.id,
         name: level.name,
+        worldSize: level.save.worldSize,
         createdAt: level.createdAt,
         updatedAt: level.updatedAt,
-        isDefault: level.id === library.defaultLevelId
+        isDefault: level.id === library.defaultLevelIds[level.save.worldSize]
       }));
     }
 
@@ -128,9 +152,9 @@
       return level ? this.clone(level) : null;
     }
 
-    getDefaultLevel() {
+    getDefaultLevel(worldSize = 'standard') {
       const library = this.readLibrary();
-      const level = library.levels.find(candidate => candidate.id === library.defaultLevelId);
+      const level = library.levels.find(candidate => candidate.id === library.defaultLevelIds[worldSize] && candidate.save.worldSize === worldSize);
       return level ? this.clone(level) : null;
     }
 
@@ -158,15 +182,20 @@
       const nextLevels = library.levels.filter(level => level.id !== id);
       if (nextLevels.length === library.levels.length) return false;
       library.levels = nextLevels;
-      if (library.defaultLevelId === id) library.defaultLevelId = null;
+      for (const sizeKey of Object.keys(library.defaultLevelIds)) {
+        if (library.defaultLevelIds[sizeKey] === id) library.defaultLevelIds[sizeKey] = null;
+      }
       this.writeLibrary(library);
       return true;
     }
 
-    setDefaultLevel(id) {
+    setDefaultLevel(id, worldSize = null) {
       const library = this.readLibrary();
-      if (id !== null && !library.levels.some(level => level.id === id)) throw new Error('Select a saved level first');
-      library.defaultLevelId = id;
+      const level = id === null ? null : library.levels.find(candidate => candidate.id === id);
+      if (id !== null && !level) throw new Error('Select a saved level first');
+      const sizeKey = level?.save.worldSize ?? worldSize;
+      if (!sizeKey || !Object.prototype.hasOwnProperty.call(library.defaultLevelIds, sizeKey)) throw new Error('Unknown world size');
+      library.defaultLevelIds[sizeKey] = id;
       this.writeLibrary(library);
       return id;
     }

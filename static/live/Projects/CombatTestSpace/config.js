@@ -12,9 +12,15 @@
     }),
     TRACE: Object.freeze({ MANUAL: 'manual', COMBAT: 'combat' }),
     EVENT: Object.freeze({ COMBAT: 'combat', TRACE: 'trace' }),
-    TOOL: Object.freeze({ TRACE: 'trace', GUARD: 'guard', OBSTACLE: 'obstacle' }),
+    TOOL: Object.freeze({ TRACE: 'trace', GUARD: 'guard', MACHINE_GUN: 'machineGun', OBSTACLE: 'obstacle' }),
     FOG: Object.freeze({ OFF: null })
   });
+
+  global.WORLD_SIZES = Object.freeze({
+    standard: Object.freeze({ label: 'Standard', width: 120, depth: 80 }),
+    xl: Object.freeze({ label: 'XL · 10×', width: 1200, depth: 800 })
+  });
+  global.OBSTACLE_SIZE = 12;
 
   const { TEAM: TEAMS, BEHAVIOR } = global.GAME_CONSTANTS;
 
@@ -53,6 +59,15 @@
   };
 
   global.GLOBAL_ACCURACY = { maxDeviationDegrees: 8 };
+
+  global.COMBAT_CONFIG = { bulletDamage: 50 };
+
+  global.MACHINE_GUN_CONFIG = {
+    rateOfFire: 10, // Bullets per second.
+    damage: 50,
+    coneOfFireDegrees: 35, // Full angle around the barrel; also controls bullet spread.
+    turnRateDegrees: 45 // Degrees per second.
+  };
 
   global.PERCEPTION_CONFIG = {
     friendliesBlockSight: false

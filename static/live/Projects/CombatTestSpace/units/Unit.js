@@ -27,6 +27,7 @@
       this.heading = Math.random() * Math.PI * 2;
       this.movementBehavior = BEHAVIOR.MOVEMENT.ROAM;
       this.guardPointId = null;
+      this.machineGunState = null;
       this.scoutEscapePoint = null;
       this.moveDestination = null;
       this.path = [];
